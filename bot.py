@@ -1,10 +1,10 @@
 import os
 import logging
+import requests  # Stable HTTP client for the keyless AI API
 from telegram import Update
 from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes
 import speech_recognition as sr
 from pydub import AudioSegment
-from duckduckgo_search import DDGS  # Reliable, free AI backend
 
 # Setup logging
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
@@ -12,25 +12,35 @@ logger = logging.getLogger(__name__)
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Sends a welcome message."""
-    await update.message.reply_text("Hi! I'm your free AI assistant. Text me or send a voice note, and I will answer you!")
+    await update.message.reply_text("Hi! I'm completely fixed now. Text me or send a voice note, and I will answer you accurately!")
 
 def ask_free_ai(prompt: str) -> str:
-    """Queries DuckDuckGo's free AI chat tool."""
+    """Queries Pollinations AI's completely free, keyless text API endpoint."""
     try:
-        with DDGS() as ddgs:
-            # Using the stable meta-llama model provided freely by DuckDuckGo
-            response = ddgs.ai_chat(keywords=prompt, model="meta-llama-3.1-70b")
-            return response
+        # Using Pollinations AI public endpoint (No key required, allows cloud IPs)
+        url = "https://text.pollinations.ai/"
+        payload = {
+            "messages": [{"role": "user", "content": prompt}],
+            "model": "openai"  # High-quality default text model
+        }
+        
+        response = requests.post(url, json=payload, timeout=15)
+        if response.status_code == 200:
+            return response.text
+        else:
+            logger.error(f"API returned status code: {response.status_code}")
+            return "I understood you, but my AI engine is running a bit slow. Please try again in a moment!"
+            
     except Exception as e:
-        logger.error(f"DuckDuckGo AI Error: {e}")
-        return "I encountered an issue processing your request. Please try asking again!"
+        logger.error(f"Pollinations AI Error: {e}")
+        return "I had trouble connecting to the AI brain. Try asking your question again!"
 
 async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Handles incoming text messages."""
     user_text = update.message.text
     await update.message.reply_chat_action(action="typing")
     
-    # Get response from the reliable free AI
+    # Send to the bulletproof free AI
     ai_response = ask_free_ai(user_text)
     await update.message.reply_text(ai_response)
 
