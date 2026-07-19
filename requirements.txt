@@ -1,0 +1,4 @@
+python-telegram-bot==21.3
+g4f==0.4.7.5
+SpeechRecognition==3.14.0
+pydub==0.25.1
