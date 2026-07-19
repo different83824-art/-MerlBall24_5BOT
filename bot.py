@@ -4,37 +4,33 @@ from telegram import Update
 from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes
 import speech_recognition as sr
 from pydub import AudioSegment
-from g4f.client import Client  # Updated to modern client import
+from duckduckgo_search import DDGS  # Reliable, free AI backend
 
 # Setup logging
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# Initialize the free AI client
-ai_client = Client()
-
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Sends a welcome message."""
-    await update.message.reply_text("Hi! I'm a completely free AI assistant. Text me or send a voice note!")
+    await update.message.reply_text("Hi! I'm your free AI assistant. Text me or send a voice note, and I will answer you!")
 
 def ask_free_ai(prompt: str) -> str:
-    """Queries the modern, free anonymous AI client configuration."""
+    """Queries DuckDuckGo's free AI chat tool."""
     try:
-        response = ai_client.chat.completions.create(
-            model="gpt-4o-mini",  # Automatically proxies to available backend networks
-            messages=[{"role": "user", "content": prompt}],
-        )
-        return response.choices[0].message.content
+        with DDGS() as ddgs:
+            # Using the stable meta-llama model provided freely by DuckDuckGo
+            response = ddgs.ai_chat(keywords=prompt, model="meta-llama-3.1-70b")
+            return response
     except Exception as e:
-        logger.error(f"AI Generation Error: {e}")
-        return "I had trouble generating a response right now. Try again in a moment!"
+        logger.error(f"DuckDuckGo AI Error: {e}")
+        return "I encountered an issue processing your request. Please try asking again!"
 
 async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Handles text messages."""
+    """Handles incoming text messages."""
     user_text = update.message.text
     await update.message.reply_chat_action(action="typing")
     
-    # Run the client worker
+    # Get response from the reliable free AI
     ai_response = ask_free_ai(user_text)
     await update.message.reply_text(ai_response)
 
@@ -68,7 +64,7 @@ async def handle_voice(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text(reply, parse_mode="Markdown")
         
     except sr.UnknownValueError:
-        await update.message.reply_text("Sorry, I couldn't understand the audio clearly.")
+        await update.message.reply_text("Sorry, I couldn't hear the audio clearly. Please try speaking closer to the mic!")
     except Exception as e:
         logger.error(f"Voice Processing Error: {e}")
         await update.message.reply_text("An error occurred while handling your voice note.")
