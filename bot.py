@@ -4,24 +4,27 @@ from telegram import Update
 from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes
 import speech_recognition as sr
 from pydub import AudioSegment
-import g4f  # Open-source API-keyless AI client
+from g4f.client import Client  # Updated to modern client import
 
 # Setup logging
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+# Initialize the free AI client
+ai_client = Client()
+
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Sends a welcome message."""
-    await update.message.reply_text("Hi! I'm a completely free AI assistant. Text me or send a voice note, no API keys attached!")
+    await update.message.reply_text("Hi! I'm a completely free AI assistant. Text me or send a voice note!")
 
-async def ask_free_ai(prompt: str) -> str:
-    """Queries a free, anonymous AI model without an API key."""
+def ask_free_ai(prompt: str) -> str:
+    """Queries the modern, free anonymous AI client configuration."""
     try:
-        response = g4f.ChatCompletion.create(
-            model=g4f.models.gpt_4o, # Automatically routes to an available free provider
+        response = ai_client.chat.completions.create(
+            model="gpt-4o-mini",  # Automatically proxies to available backend networks
             messages=[{"role": "user", "content": prompt}],
         )
-        return response
+        return response.choices[0].message.content
     except Exception as e:
         logger.error(f"AI Generation Error: {e}")
         return "I had trouble generating a response right now. Try again in a moment!"
@@ -31,7 +34,8 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_text = update.message.text
     await update.message.reply_chat_action(action="typing")
     
-    ai_response = await ask_free_ai(user_text)
+    # Run the client worker
+    ai_response = ask_free_ai(user_text)
     await update.message.reply_text(ai_response)
 
 async def handle_voice(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -54,11 +58,10 @@ async def handle_voice(update: Update, context: ContextTypes.DEFAULT_TYPE):
         recognizer = sr.Recognizer()
         with sr.AudioFile(wav_filename) as source:
             audio_data = recognizer.record(source)
-            # Using the built-in free web search recognition API
             user_transcription = recognizer.recognize_google(audio_data)
         
         # 4. Feed transcription into our free AI brain
-        ai_response = await ask_free_ai(user_transcription)
+        ai_response = ask_free_ai(user_transcription)
         
         # 5. Format and reply
         reply = f"🗣️ *You said:* {user_transcription}\n\n🤖 *AI:* {ai_response}"
@@ -70,14 +73,13 @@ async def handle_voice(update: Update, context: ContextTypes.DEFAULT_TYPE):
         logger.error(f"Voice Processing Error: {e}")
         await update.message.reply_text("An error occurred while handling your voice note.")
     finally:
-        # Clean up temporary local files so your server doesn't run out of space
+        # Clean up temporary local files
         if os.path.exists(ogg_filename):
             os.remove(ogg_filename)
         if os.path.exists(wav_filename):
             os.remove(wav_filename)
 
 def main():
-    # Only the Telegram Bot Token is required here!
     TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN")
     if not TELEGRAM_TOKEN:
         logger.error("TELEGRAM_TOKEN variable is missing!")
